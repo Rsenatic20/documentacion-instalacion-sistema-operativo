@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Instalación de Windows</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+        .windows-blue { background-color: #0078d4; }
+        .windows-blue-text { color: #0078d4; }
+        .progress-bar-fill {
+            transition: width 0.5s ease-in-out;
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .btn {
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .btn-primary {
+            background-color: #0078d4;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #005a9e;
+        }
+        .btn-secondary {
+            background-color: #e2e8f0;
+            color: #2d3748;
+        }
+        .btn-secondary:hover {
+            background-color: #cbd5e0;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+        
+        <!-- Sección de Explicación -->
+        <div id="explanation-section" class="space-y-8">
+            <header class="text-center">
+                <h1 class="text-4xl md:text-5xl font-bold windows-blue-text">Instalación de Windows 11</h1>
+                <p class="text-lg text-gray-600 mt-2">Una guía interactiva y simulador</p>
+            </header>
+
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div class="card p-8">
+                    <h2 class="text-2xl font-bold mb-4">¿Qué es la instalación de Windows?</h2>
+                    <p class="text-gray-700 leading-relaxed">
+                        Es el proceso fundamental de cargar el sistema operativo Windows en el disco duro de un ordenador. Piensa en ello como construir los cimientos de una casa. Sin el sistema operativo, tu PC sería solo una colección de componentes electrónicos sin la capacidad de interactuar contigo o ejecutar programas. Este proceso prepara el disco, copia los archivos necesarios y configura el sistema para su primer uso.
+                    </p>
+                </div>
+                <div class="card p-8">
+                    <h2 class="text-2xl font-bold mb-4">¿Para qué sirve?</h2>
+                    <p class="text-gray-700 leading-relaxed">
+                        La instalación de Windows es esencial para:
+                        <ul class="list-disc list-inside mt-2 space-y-2">
+                            <li><strong>Dar vida al hardware:</strong> Permite que el software se comunique con los componentes físicos de tu PC (procesador, memoria, etc.).</li>
+                            <li><strong>Proporcionar una interfaz:</strong> Ofrece un entorno gráfico (escritorio, iconos, ventanas) para que puedas usar el ordenador de forma intuitiva.</li>
+                            <li><strong>Ejecutar aplicaciones:</strong> Crea la plataforma necesaria para instalar y usar todo tipo de software, desde navegadores web hasta videojuegos.</li>
+                            <li><strong>Resolver problemas:</strong> Una instalación limpia puede solucionar errores graves del sistema, eliminar virus y mejorar el rendimiento general.</li>
+                        </ul>
+                    </p>
+                </div>
+            </div>
+
+            <div class="text-center mt-8">
+                <button id="start-simulation-btn" class="btn btn-primary font-bold py-3 px-8 rounded-lg text-xl shadow-lg">
+                    Iniciar Simulación de Instalación
+                </button>
+            </div>
+        </div>
+
+        <!-- Sección de Simulación -->
+        <div id="simulation-section" class="hidden">
+            <div id="simulation-window" class="bg-white rounded-lg shadow-2xl overflow-hidden min-h-[600px] flex flex-col">
+                <!-- El contenido de cada paso se inyectará aquí -->
+            </div>
+        </div>
+
+        <!-- Sección de Informe -->
+        <div id="report-section" class="hidden card p-8">
+            <h2 class="text-3xl font-bold text-center mb-6 windows-blue-text">Informe del Proceso de Instalación</h2>
+            <div id="report-content" class="prose max-w-none">
+                <!-- El contenido del informe se inyectará aquí -->
+            </div>
+            <div class="text-center mt-8">
+                <button id="download-pdf-btn" class="btn btn-primary font-bold py-2 px-6 rounded-lg">
+                    Descargar Informe en PDF
+                </button>
+                 <button id="restart-btn" class="btn btn-secondary font-bold py-2 px-6 rounded-lg ml-4">
+                    Reiniciar Simulación
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Inicialización de jsPDF
+        const { jsPDF } = window.jspdf;
+
+        // Elementos del DOM
+        const explanationSection = document.getElementById('explanation-section');
+        const simulationSection = document.getElementById('simulation-section');
+        const reportSection = document.getElementById('report-section');
+        const startSimulationBtn = document.getElementById('start-simulation-btn');
+        const simulationWindow = document.getElementById('simulation-window');
+        const downloadPdfBtn = document.getElementById('download-pdf-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const reportContent = document.getElementById('report-content');
+
+        // Estado de la simulación
+        let currentStep = 0;
+        const installationLog = {};
+
+        // Iniciar la simulación
+        startSimulationBtn.addEventListener('click', () => {
+            explanationSection.classList.add('hidden');
+            simulationSection.classList.remove('hidden');
+            currentStep = 0;
+            Object.keys(installationLog).forEach(key => delete installationLog[key]);
+            renderStep();
+        });
+
+        // Reiniciar la simulación
+        restartBtn.addEventListener('click', () => {
+            reportSection.classList.add('hidden');
+            explanationSection.classList.remove('hidden');
+        });
+        
+        // Descargar PDF
+        downloadPdfBtn.addEventListener('click', () => {
+            const doc = new jsPDF();
+            const reportTitle = "Informe del Proceso de Instalación de Windows";
+            
+            doc.setFontSize(18);
+            doc.text(reportTitle, 105, 20, null, null, 'center');
+
+            let y = 40;
+            doc.setFontSize(12);
+            
+            const addSection = (title, content) => {
+                if (y > 260) { // Margen inferior para evitar desbordamiento
+                    doc.addPage();
+                    y = 20;
+                }
+                doc.setFont(undefined, 'bold');
+                doc.text(title, 14, y);
+                y += 8;
+                doc.setFont(undefined, 'normal');
+                const splitContent = doc.splitTextToSize(content, 180);
+                doc.text(splitContent, 14, y);
+                y += (splitContent.length * 5) + 8;
+            };
+
+            addSection("Fecha de Simulación:", installationLog.simulationDate);
+            addSection("Configuración Regional:", `Idioma: ${installationLog.language}, Formato de hora: ${installationLog.timeFormat}, Teclado: ${installationLog.keyboard}`);
+            addSection("Clave de Producto:", installationLog.productKey);
+            addSection("Versión del Sistema Operativo:", installationLog.osVersion);
+            addSection("Acuerdo de Licencia:", installationLog.licenseAccepted);
+            addSection("Tipo de Instalación:", installationLog.installType);
+            addSection("Disco de Destino:", installationLog.driveSelection);
+            addSection("Estado de la Instalación:", installationLog.installStatus);
+            addSection("Configuración de Usuario:", `Nombre de usuario: ${installationLog.username}, Contraseña: ${installationLog.password}`);
+            addSection("Finalización:", "El proceso de configuración simulado ha finalizado correctamente.");
+
+            doc.save('informe-instalacion-windows.pdf');
+        });
+
+        // Función para avanzar al siguiente paso
+        function nextStep() {
+            currentStep++;
+            renderStep();
+        }
+        
+        // Función para renderizar el paso actual
+        function renderStep() {
+            simulationWindow.innerHTML = ''; // Limpiar ventana
+            switch (currentStep) {
+                case 0:
+                    renderWelcomeScreen();
+                    break;
+                case 1:
+                    renderLanguageSelection();
+                    break;
+                case 2:
+                    renderProductKey();
+                    break;
+                case 3:
+                    renderOsVersion();
+                    break;
+                case 4:
+                    renderLicenseAgreement();
+                    break;
+                case 5:
+                    renderInstallType();
+                    break;
+                case 6:
+                    renderDrivePartition();
+                    break;
+                case 7:
+                    renderInstallationProgress();
+                    break;
+                case 8:
+                    renderUserSetup();
+                    break;
+                case 9:
+                    renderFinalizing();
+                    break;
+                case 10:
+                    generateReport();
+                    break;
+            }
+        }
+
+        // Renderizadores de cada paso
+        function renderWelcomeScreen() {
+            simulationWindow.innerHTML = `
+                <div class="flex-grow flex flex-col justify-center items-center p-8 bg-cover" style="background-image: url('https://placehold.co/1000x600/0078d4/ffffff?text=Windows+11');">
+                    <div class="bg-white/80 backdrop-blur-sm p-10 rounded-lg text-center shadow-lg">
+                        <h2 class="text-4xl font-semibold mb-4">Instalación de Windows</h2>
+                        <p class="text-gray-700 mb-8">Siga los pasos para instalar Windows 11 en este equipo.</p>
+                        <button id="install-now-btn" class="btn btn-primary font-bold py-3 px-10 rounded-md">Instalar ahora</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('install-now-btn').onclick = nextStep;
+        }
+
+        function renderLanguageSelection() {
+            simulationWindow.innerHTML = `
+                <div class="p-8 md:p-12 flex-grow flex flex-col">
+                    <h2 class="text-2xl font-semibold mb-6">Configuración de Windows</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="language" class="block text-sm font-medium text-gray-700">Idioma que va a instalar:</label>
+                            <select id="language" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                <option>Español (España)</option>
+                                <option selected>Español (México)</option>
+                                <option>Inglés (Estados Unidos)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="time-format" class="block text-sm font-medium text-gray-700">Formato de hora y moneda:</label>
+                            <select id="time-format" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                <option>Español (España)</option>
+                                <option selected>Español (México)</option>
+                                <option>Inglés (Estados Unidos)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="keyboard" class="block text-sm font-medium text-gray-700">Teclado o método de entrada:</label>
+                            <select id="keyboard" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                <option>Español</option>
+                                <option selected>Latinoamericano</option>
+                                <option>EE. UU.</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-auto pt-6 text-right">
+                        <button id="lang-next-btn" class="btn btn-primary font-medium py-2 px-6 rounded-md">Siguiente</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('lang-next-btn').onclick = () => {
+                installationLog.language = document.getElementById('language').value;
+                installationLog.timeFormat = document.getElementById('time-format').value;
+                installationLog.keyboard = document.getElementById('keyboard').value;
+                nextStep();
+            };
+        }
+
+        function renderProductKey() {
+            simulationWindow.innerHTML = `
+                <div class="p-8 md:p-12 flex-grow flex flex-col">
+                    <h2 class="text-2xl font-semibold mb-4">Activar Windows</h2>
+                    <p class="text-gray-600 mb-6">Escriba la clave de producto para activar Windows.</p>
+                    <input type="text" id="product-key" placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" class="w-full p-2 border border-gray-300 rounded-md">
+                    <a href="#" id="no-key-link" class="text-sm text-blue-600 hover:underline mt-4">No tengo una clave de producto</a>
+                    <div class="mt-auto pt-6 text-right">
+                        <button id="key-next-btn" class="btn btn-primary font-medium py-2 px-6 rounded-md">Siguiente</button>
+                    </div>
+                </div>
+            `;
+            const noKeyLink = document.getElementById('no-key-link');
+            const keyNextBtn = document.getElementById('key-next-btn');
+
+            noKeyLink.onclick = (e) => {
+                e.preventDefault();
+                installationLog.productKey = 'Omitida por el usuario';
+                nextStep();
+            };
+            keyNextBtn.onclick = () => {
+                const key = document.getElementById('product-key').value;
+                installationLog.productKey = key ? key : 'No se proporcionó clave';
+                nextStep();
+            };
+        }
+
+        function renderOsVersion() {
+            simulationWindow.innerHTML = `
+                <div class="p-8 md:p-12 flex-grow flex flex-col">
+                    <h2 class="text-2xl font-semibold mb-6">Elige el sistema operativo que quieres instalar</h2>
+                    <div id="os-list" class="space-y-2 border border-gray-300 rounded-md p-2 overflow-y-auto h-64">
+                        <div class="p-3 rounded cursor-pointer hover:bg-blue-100" data-os="Windows 11 Home">Windows 11 Home</div>
+                        <div class="p-3 rounded cursor-pointer hover:bg-blue-100 bg-blue-200" data-os="Windows 11 Pro">Windows 11 Pro</div>
+                        <div class="p-3 rounded cursor-pointer hover:bg-blue-100" data-os="Windows 11 Education">Windows 11 Education</div>
+                        <div class="p-3 rounded cursor-pointer hover:bg-blue-100" data-os="Windows 11 Pro for Workstations">Windows 11 Pro for Workstations</div>
+                    </div>
+                    <div class="mt-auto pt-6 text-right">
+                        <button id="os-next-btn" class="btn btn-primary font-medium py-2 px-6 rounded-md">Siguiente</button>
+                    </div>
+                </div>
+            `;
+            const osList = document.getElementById('os-list');
+            let selectedOs = 'Windows 11 Pro';
+            osList.querySelectorAll('div').forEach(item => {
+                item.onclick = () => {
+                    osList.querySelector('.bg-blue-200').classList.remove('bg-blue-200');
+                    item.classList.add('bg-blue-200');
+                    selectedOs = item.dataset.os;
+                };
+            });
+            document.getElementById('os-next-btn').onclick = () => {
+                installationLog.osVersion = selectedOs;
+                nextStep();
+            };
+        }
+
+        function renderLicenseAgreement() {
+            simulationWindow.innerHTML = `
+                <div class="p-8 md:p-12 flex-grow flex flex-col">
+                    <h2 class="text-2xl font-semibold mb-4">Avisos y términos de licencia aplicables</h2>
+                    <div class="border border-gray-300 p-4 h-80 overflow-y-scroll bg-gray-50 text-sm">
+                        <p class="font-bold mb-2">TÉRMINOS DE LICENCIA DE SOFTWARE DE MICROSOFT</p>
+                        <p>Estos términos de licencia son un contrato entre usted y Microsoft Corporation (o una de sus filiales). Se aplican al software que se indica arriba y a cualquier servicio o actualización de software de Microsoft (excepto en la medida en que dichos servicios o actualizaciones vengan acompañados de términos nuevos o adicionales, en cuyo caso esos términos diferentes se aplican de forma prospectiva y no alteran sus derechos ni los de Microsoft en relación con el software preactualizado).</p>
+                        <p class="mt-2">SI CUMPLE CON ESTOS TÉRMINOS DE LICENCIA, TENDRÁ LOS DERECHOS QUE SE INDICAN A CONTINUACIÓN. AL USAR EL SOFTWARE, ACEPTA ESTOS TÉRMINOS. ...</p>
+                        <p class="mt-4">[Contenido de la licencia simulado continúa...]</p>
+                    </div>
+                    <div class="mt-4 flex items-center">
+                        <input id="accept-license" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <label for="accept-license" class="ml-2 block text-sm text-gray-900">Acepto los términos de licencia</label>
+                    </div>
+                    <div class="mt-auto pt-6 text-right">
+                        <button id="license-next-btn" class="btn btn-primary font-medium py-2 px-6 rounded-md" disabled>Siguiente</button>
+                    </div>
+                </div>
+            `;
+            const acceptCheckbox = document.getElementById('accept-license');
+            const nextBtn = document.getElementById('license-next-btn');
+            acceptCheckbox.onchange = () => {
+                nextBtn.disabled = !acceptCheckbox.checked;
+            };
+            nextBtn.onclick = () => {
+                installationLog.licenseAccepted = 'Sí';
+                nextStep();
+            };
+        }
+
+        function renderInstallType() {
+            simulationWindow.innerHTML = `
+                 <div class="p-8 md:p-12 flex-grow flex flex-col">
+                    <h2 class="text-2xl font-semibold mb-6">¿Qué tipo de instalación quieres?</h2>
+                    <div class="space-y-4">
+                        <button data-type="Actualización" class="w-full text-left p-4 border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <h3 class="text-lg font-semibold">Actualización: Instalar Windows y conservar archivos, configuraciones y aplicaciones</h3>
+                            <p class="text-sm text-gray-600">Los archivos, las configuraciones y las aplicaciones se migran a Windows con esta opción. Esta opción solo está disponible si una versión compatible de Windows ya se está ejecutando en el equipo.</p>
+                        </button>
+                        <button data-type="Personalizada" class="w-full text-left p-4 border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <h3 class="text-lg font-semibold">Personalizada: Instalar solo Windows (avanzado)</h3>
+                            <p class="text-sm text-gray-600">Los archivos, las configuraciones y las aplicaciones no se migran a Windows con esta opción. Si quieres realizar cambios en las particiones y las unidades, inicia el equipo con el disco de instalación.</p>
+                        </button>
+                    </div>
+                </div>
+            `;
+            simulationWindow.querySelectorAll('button').forEach(button => {
+                button.onclick = () => {
+                    installationLog.installType = button.dataset.type;
+                    nextStep();
+                };
+            });
+        }
+
+        function renderDrivePartition() {
+            simulationWindow.innerHTML = `
+                <div class="p-8 md:p-12 flex-grow flex flex-col">
+                    <h2 class="text-2xl font-semibold mb-6">¿Dónde quieres instalar Windows?</h2>
+                    <div class="border border-gray-300">
+                        <div class="grid grid-cols-4 bg-gray-100 p-2 font-semibold">
+                            <div>Nombre</div>
+                            <div>Espacio total</div>
+                            <div>Espacio disponible</div>
+                            <div>Tipo</div>
+                        </div>
+                        <div id="drive-list">
+                            <div class="grid grid-cols-4 p-2 cursor-pointer hover:bg-blue-100 border-t border-gray-200 bg-blue-200" data-drive="Unidad 0 Partición 2">
+                                <div>Unidad 0 Partición 2</div>
+                                <div>465.2 GB</div>
+                                <div>465.0 GB</div>
+                                <div>Principal</div>
+                            </div>
+                            <div class="grid grid-cols-4 p-2 cursor-pointer hover:bg-blue-100 border-t border-gray-200" data-drive="Unidad 0 Partición 1">
+                                <div>Unidad 0 Partición 1</div>
+                                <div>500.0 MB</div>
+                                <div>120.0 MB</div>
+                                <div>Sistema</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-sm text-gray-600">
+                        <button class="border px-2 py-1 rounded-md bg-white hover:bg-gray-50">Formatear</button>
+                        <button class="border px-2 py-1 rounded-md bg-white hover:bg-gray-50">Eliminar</button>
+                        <button class="border px-2 py-1 rounded-md bg-white hover:bg-gray-50">Nuevo</button>
+                    </div>
+                    <div class="mt-auto pt-6 text-right">
+                        <button id="drive-next-btn" class="btn btn-primary font-medium py-2 px-6 rounded-md">Siguiente</button>
+                    </div>
+                </div>
+            `;
+            const driveList = document.getElementById('drive-list');
+            let selectedDrive = 'Unidad 0 Partición 2';
+            driveList.querySelectorAll('div.grid').forEach(item => {
+                item.onclick = () => {
+                    const currentSelected = driveList.querySelector('.bg-blue-200');
+                    if (currentSelected) currentSelected.classList.remove('bg-blue-200');
+                    item.classList.add('bg-blue-200');
+                    selectedDrive = item.dataset.drive;
+                };
+            });
+            document.getElementById('drive-next-btn').onclick = () => {
+                installationLog.driveSelection = selectedDrive;
+                nextStep();
+            };
+        }
+
+        function renderInstallationProgress() {
+            simulationWindow.innerHTML = `
+                <div class="p-8 md:p-12 flex-grow flex flex-col justify-center">
+                    <h2 class="text-2xl font-semibold mb-4">Instalando Windows</h2>
+                    <p class="text-gray-600 mb-6">El equipo se reiniciará varias veces. Esto puede tardar un poco.</p>
+                    <div id="progress-list" class="space-y-2 mb-6">
+                        <div id="status-copy">Copiando archivos de Windows...</div>
+                        <div id="status-ready" class="text-gray-400">Preparando archivos para la instalación (0%)</div>
+                        <div id="status-features" class="text-gray-400">Instalando características...</div>
+                        <div id="status-updates" class="text-gray-400">Instalando actualizaciones...</div>
+                        <div id="status-finish" class="text-gray-400">Acabando...</div>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full progress-bar-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+            `;
+            
+            const progressBar = document.getElementById('progress-bar');
+            const statuses = {
+                copy: document.getElementById('status-copy'),
+                ready: document.getElementById('status-ready'),
+                features: document.getElementById('status-features'),
+                updates: document.getElementById('status-updates'),
+                finish: document.getElementById('status-finish')
+            };
+
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 5;
+                if (progress > 100) progress = 100;
+                progressBar.style.width = progress + '%';
+
+                if (progress > 10) {
+                    statuses.copy.textContent = '✓ Copiando archivos de Windows (Completado)';
+                    statuses.copy.classList.add('text-green-600');
+                    statuses.ready.classList.remove('text-gray-400');
+                    statuses.ready.textContent = `Preparando archivos para la instalación (${Math.min(100, Math.round((progress-10)*1.2))}%)`;
+                }
+                if (progress > 50) {
+                     statuses.ready.textContent = '✓ Preparando archivos para la instalación (Completado)';
+                     statuses.ready.classList.add('text-green-600');
+                     statuses.features.classList.remove('text-gray-400');
+                }
+                 if (progress > 75) {
+                    statuses.features.textContent = '✓ Instalando características (Completado)';
+                    statuses.features.classList.add('text-green-600');
+                    statuses.updates.classList.remove('text-gray-400');
+                }
+                 if (progress > 90) {
+                    statuses.updates.textContent = '✓ Instalando actualizaciones (Completado)';
+                    statuses.updates.classList.add('text-green-600');
+                    statuses.finish.classList.remove('text-gray-400');
+                }
+
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    statuses.finish.textContent = '✓ Acabando... (Completado)';
+                    statuses.finish.classList.add('text-green-600');
+                    installationLog.installStatus = 'Completada con éxito';
+                    setTimeout(nextStep, 1500);
+                }
+            }, 200);
+        }
+
+        function renderUserSetup() {
+            simulationWindow.innerHTML = `
+                <div class="p-8 md:p-12 flex-grow flex flex-col justify-center bg-gray-100">
+                    <div class="max-w-md mx-auto w-full">
+                        <h2 class="text-2xl font-semibold mb-6 text-center">Vamos a crear tu cuenta</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="username" class="block text-sm font-medium text-gray-700">¿Quién va a usar este equipo?</label>
+                                <input type="text" id="username" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Tu nombre">
+                            </div>
+                            <div>
+                                <label for="password" class="block text-sm font-medium text-gray-700">Crea una contraseña (opcional)</label>
+                                <input type="password" id="password" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Contraseña segura">
+                            </div>
+                        </div>
+                        <div class="mt-8 text-right">
+                            <button id="user-next-btn" class="btn btn-primary font-medium py-2 px-6 rounded-md">Siguiente</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('user-next-btn').onclick = () => {
+                const username = document.getElementById('username').value;
+                if (!username) {
+                    alert('Por favor, introduce un nombre de usuario.');
+                    return;
+                }
+                installationLog.username = username;
+                installationLog.password = document.getElementById('password').value ? 'Establecida' : 'No establecida';
+                nextStep();
+            };
+        }
+
+        function renderFinalizing() {
+            simulationWindow.innerHTML = `
+                <div class="p-8 md:p-12 flex-grow flex flex-col justify-center items-center windows-blue text-white text-center">
+                    <h2 class="text-3xl font-light mb-4">Hola</h2>
+                    <p class="text-xl mb-8">Estamos preparando todo para ti</p>
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+                    <p class="mt-8">Esto puede tardar unos minutos.<br>No apagues el equipo.</p>
+                </div>
+            `;
+            setTimeout(() => {
+                installationLog.simulationDate = new Date().toLocaleString('es-ES');
+                nextStep();
+            }, 4000);
+        }
+
+        function generateReport() {
+            simulationSection.classList.add('hidden');
+            reportSection.classList.remove('hidden');
+
+            reportContent.innerHTML = `
+                <p><strong>Fecha de Simulación:</strong> ${installationLog.simulationDate}</p>
+                <h3 class="font-bold mt-4">1. Configuración Regional</h3>
+                <ul>
+                    <li><strong>Idioma seleccionado:</strong> ${installationLog.language}</li>
+                    <li><strong>Formato de hora y moneda:</strong> ${installationLog.timeFormat}</li>
+                    <li><strong>Método de teclado:</strong> ${installationLog.keyboard}</li>
+                </ul>
+                <h3 class="font-bold mt-4">2. Activación</h3>
+                <p><strong>Clave de Producto:</strong> ${installationLog.productKey}</p>
+                <h3 class="font-bold mt-4">3. Selección de Sistema</h3>
+                <p><strong>Versión de Windows instalada:</strong> ${installationLog.osVersion}</p>
+                <p><strong>Acuerdo de licencia:</strong> ${installationLog.licenseAccepted}</p>
+                <h3 class="font-bold mt-4">4. Proceso de Instalación</h3>
+                <p><strong>Tipo de instalación:</strong> ${installationLog.installType}</p>
+                <p><strong>Disco de destino:</strong> ${installationLog.driveSelection}</p>
+                <p><strong>Estado de la copia de archivos:</strong> ${installationLog.installStatus}</p>
+                <h3 class="font-bold mt-4">5. Configuración Final</h3>
+                <p><strong>Nombre de usuario:</strong> ${installationLog.username}</p>
+                <p><strong>Contraseña:</strong> ${installationLog.password}</p>
+                <hr class="my-4">
+                <p class="text-green-600 font-semibold">El proceso de instalación simulado ha finalizado correctamente.</p>
+            `;
+        }
+
+    </script>
+</body>
+</html>
